@@ -1,0 +1,52 @@
+name: Build Pure Static FFmpeg CLI for Android
+
+on: 
+  workflow_dispatch: # 允许手动点击触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取 FFmpeg 官方正版源码 (The Source)
+        uses: actions/checkout@v4
+        with:
+          repository: FFmpeg/FFmpeg # 直接从官方镜像库拉取最新代码！
+          ref: master
+          
+      - name: 配置 Android NDK (底层翻译官)
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+          
+      - name: 注入纯静态 CLI 编译魔法并锻造
+        run: |
+          # 提取 NDK 工具链的绝对路径
+          TOOLCHAIN=${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64
+          
+          # 执行官方配置：强行开启静态 ffmpeg 命令行工具，关闭所有动态库和无用组件
+          ./configure \
+            --target-os=android \
+            --arch=aarch64 \
+            --cc=$TOOLCHAIN/bin/aarch64-linux-android28-clang \
+            --cxx=$TOOLCHAIN/bin/aarch64-linux-android28-clang++ \
+            --strip=$TOOLCHAIN/bin/llvm-strip \
+            --enable-cross-compile \
+            --disable-shared \
+            --enable-static \
+            --enable-small \
+            --enable-ffmpeg \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --disable-doc \
+            --disable-vulkan \
+            --disable-symver
+            
+          # 开启 4 线程全速编译
+          make -j4
+          
+      - name: 提取独立战利品
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-android-static-bin
+          path: ffmpeg # 只提取编译出的 ffmpeg 独立可执行文件
