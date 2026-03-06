@@ -1,34 +1,33 @@
 name: Build Android Static Whisper
 
 on: 
-  workflow_dispatch: # 允许我们手动点击按钮触发编译
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 克隆源码 (Checkout source)
+      - name: 克隆源码
         uses: actions/checkout@v4
         
-      - name: 配置 Android NDK (翻译官)
+      - name: 配置 Android NDK
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r26b
           
-      - name: 注入终极静态魔法并开始编译 (The Magic)
+      - name: 注入真正的静态魔法 (修复参数名称)
         run: |
           cmake -B build-android \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-28 \
             -DBUILD_SHARED_LIBS=OFF \
-            -DWHISPER_BUILD_SHARED_LIB=OFF \
-            -DWHISPER_OPENMP=OFF
+            -DGGML_OPENMP=OFF
             
           cmake --build build-android --config Release -j 4
           
-      - name: 打包纯净版战利品供下载
+      - name: 打包纯净版战利品
         uses: actions/upload-artifact@v4
         with:
           name: whisper-android-bin
